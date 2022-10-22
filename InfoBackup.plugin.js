@@ -2,7 +2,7 @@
  * @name InfoBackup
  * @author rafa_br34
  * @authorId 642064514476408832
- * @version 0.0.2
+ * @version 0.0.3
  * @description Adds utilities to backup Discord information(Friend list) in a file
  * @invite BztRQ9t67N
  * @donate https://www.buymeacoffee.com/rafabr34
@@ -144,7 +144,11 @@ module.exports = (function() {
 						PluginConfig.PluginConfig = Config
 					}
 					G_Running = true;
-					
+
+					while (!BDFDB || !BDFDB.LibraryStores || !BDFDB.LibraryStores.RelationshipStore) {
+						await Sleep(5000);
+					}
+
 					(async function () {
 						while (G_Running) {
 							BdApi.UI.showToast(`Saving Backup File...`, { type: "info", timeout: 3000 })
