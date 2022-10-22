@@ -16,7 +16,7 @@ module.exports = (function() {
 		"PluginInfo": {
 			"Name": "InfoBackup",
 			"Author": "rafa_br34",
-			"Version": "0.0.1",
+			"Version": "0.0.4",
 			"Description": "Allows you to backup your friend list in a file with automatic backups"
 		},
 		"PluginConfig": {
