@@ -3,7 +3,7 @@
  * @author rafa_br34
  * @authorId 642064514476408832
  * @version 0.0.4
- * @description Adds utilities to backup Discord information(Friend list) in a file
+ * @description Allows you to backup your friend list in a file with automatic backups
  * @invite BztRQ9t67N
  * @donate https://www.buymeacoffee.com/rafabr34
  * @website https://rafa-br34.github.io/
@@ -17,7 +17,7 @@ module.exports = (function() {
 			"Name": "InfoBackup",
 			"Author": "rafa_br34",
 			"Version": "0.0.1",
-			"Description": "Adds utilities to backup Discord information(Friend list) in a file"
+			"Description": "Allows you to backup your friend list in a file with automatic backups"
 		},
 		"PluginConfig": {
 			"FileSavingDelay": (60 * (60 * 1000))
