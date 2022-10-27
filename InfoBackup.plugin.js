@@ -2,7 +2,7 @@
  * @name InfoBackup
  * @author rafa_br34
  * @authorId 642064514476408832
- * @version 0.0.4
+ * @version 0.0.5
  * @description Allows you to backup your friend list in a file with automatic backups
  * @invite BztRQ9t67N
  * @donate https://www.buymeacoffee.com/rafabr34
@@ -11,18 +11,25 @@
  * @updateUrl https://raw.githubusercontent.com/rafa-br34/BetterDiscordPlugins/main/InfoBackup.plugin.js
  */
 
-module.exports = (function() {
-	var PluginConfig = {
-		"PluginInfo": {
-			"Name": "InfoBackup",
-			"Author": "rafa_br34",
-			"Version": "0.0.4",
-			"Description": "Allows you to backup your friend list in a file with automatic backups"
-		},
-		"PluginConfig": {
-			"FileSavingDelay": (60 * (60 * 1000))
-		}
-	};
+
+function DBG() {
+	//console.log(...arguments)
+}
+
+var PluginConfig = {
+	"PluginInfo": {
+		"Name": "InfoBackup",
+		"Author": "rafa_br34",
+		"Version": "0.0.5",
+		"Description": "Allows you to backup your friend list in a file with automatic backups",
+		"GitHubRaw": "https://raw.githubusercontent.com/rafa-br34/BetterDiscordPlugins/main/InfoBackup.plugin.js"
+	},
+	"PluginConfig": {
+		"FileSavingDelay": (60 * (60 * 1000))
+	}
+};
+
+module.exports = (function () {
 
 	var G_Running = false;
 
@@ -30,41 +37,43 @@ module.exports = (function() {
 		return new Promise(Resolve => setTimeout(Resolve, DelayMS));
 	}
 
-	function DBG() {
-		console.log(...arguments)
-	}
 
-	const ChangeLog = {}
+	var Request = require("request")
+	var Path = require("path")
+	var FileSystem = require("fs");
 
-	if (!window.BDFDB_Global || (!window.BDFDB_Global.loaded && !window.BDFDB_Global.started)) {
+
+	if (!global.ZeresPluginLibrary) {
 		return class {
 			getName() { return PluginConfig.PluginInfo.Name; }
 			getAuthor() { return PluginConfig.PluginInfo.Author; }
 			getVersion() { return PluginConfig.PluginInfo.Version; }
-			getDescription() { return `The Library Plugin needed for ${PluginConfig.PluginInfo.Name} is missing. Open the Plugin Settings to download it. \n\n${PluginConfig.PluginInfo.Description}`; }
+			getDescription() { return `${PluginConfig.PluginInfo.Name} Needs ZeresPluginLibrary To Work.`; }
 
 			downloadLibrary() {
-				require("request").get("https://mwittrien.github.io/BetterDiscordAddons/Library/0BDFDB.plugin.js", (e, r, b) => {
-					if (!e && b && r.statusCode == 200) require("fs").writeFile(require("path").join(BdApi.Plugins.folder, "0BDFDB.plugin.js"), b, _ => BdApi.UI.showToast("Finished downloading BDFDB Library", { type: "success" }));
-					else BdApi.alert("Error", "Could not download BDFDB Library Plugin. Try again later or download it manually from GitHub: https://mwittrien.github.io/downloader/?library");
+				Request.get("https://raw.githubusercontent.com/rauenzi/BDPluginLibrary/master/release/0PluginLibrary.plugin.js", (Error, ResponseStatus, FileData) => {
+					if (!Error && FileData && ResponseStatus.statusCode == 200) {
+						FileSystem.writeFile(
+							Path.join(BdApi.Plugins.folder, "0PluginLibrary.plugin.js"),
+							FileData,
+							() => BdApi.UI.showToast("Successfully Installed ZeresPluginLibrary!", { type: "success" })
+						);
+					}
+					else BdApi.alert("Error", "Failed To Download ZeresPluginLibrary. Try Again Later Or Download Manually From GitHub: https://github.com/rauenzi/BDPluginLibrary");
 				});
 			}
 
 			load() {
-				if (!window.BDFDB_Global || !Array.isArray(window.BDFDB_Global.pluginQueue)) window.BDFDB_Global = Object.assign({}, window.BDFDB_Global, { pluginQueue: [] });
-				if (!window.BDFDB_Global.downloadModal) {
-					window.BDFDB_Global.downloadModal = true;
-					BdApi.showConfirmationModal("Library Missing", `The Library Plugin needed for ${PluginConfig.PluginInfo.Name} is missing. Please click "Download Now" to install it.`, {
+				if (!global.ZeresPluginLibrary) {
+					BdApi.showConfirmationModal("Library Missing", `${PluginConfig.PluginInfo.Name} Needs ZeresPluginLibrary To Work.`, {
 						confirmText: "Download Now",
 						cancelText: "Cancel",
-						onCancel: _ => { delete window.BDFDB_Global.downloadModal; },
+						onCancel: _ => { return },
 						onConfirm: _ => {
-							delete window.BDFDB_Global.downloadModal;
 							this.downloadLibrary();
 						}
 					});
 				}
-				if (!window.BDFDB_Global.pluginQueue.includes(PluginConfig.PluginInfo.Name)) window.BDFDB_Global.pluginQueue.push(PluginConfig.PluginInfo.Name);
 			}
 			start() { this.load(); }
 			stop() { }
@@ -77,12 +86,11 @@ module.exports = (function() {
 		}
 	}
 	else {
-		return (([Plugin, BDFDB]) => {
+		return (([Plugin, ZeresPluginLibrary]) => {
 
 			function SaveBackupFile() {
 				DBG("Backup")
-				var FileSystem = require("fs");
-				var Path = require("path")
+
 				var Folder = Path.join(BdApi.Plugins.folder, "InfoBackupFolder")
 
 				try {
@@ -94,24 +102,29 @@ module.exports = (function() {
 					DBG("Folder Exists")
 				}
 
-				
+
 				var Friends = []
 				{
-					var FriendIds = BDFDB.LibraryStores.RelationshipStore.getFriendIDs();
-					DBG("Friends: ", FriendIds.length)
-					for (var ID of FriendIds) {
-						var User = BDFDB.LibraryStores.UserStore.getUser(ID)
+					var Relationships = ZeresPluginLibrary.DiscordModules.RelationshipStore.getRelationships();
+					var Users = ZeresPluginLibrary.DiscordModules.UserStore.getUsers();
+					DBG("Cached Users:", Object.keys(Users).length, "Relationships:", Object.keys(Relationships).length)
+
+					for (var ID in Relationships) {
+						if (Relationships[ID] != 1) { continue }
+						var User = Users[ID]
 						var NameWithTag = User.tag || `${User.username}#${User.discriminator}`
 						Friends.push({ "Name": NameWithTag, "Id": User.id })
 					}
 				}
+				DBG("Friends:", Friends.length)
+
 				var Data = {
 					"Info": {
 						"FriendsAmount": Friends.length
 					},
 					"Friends": Friends
 				}
-				
+
 				var FilePath = Path.join(Folder, "InfoBackup.json")
 				DBG("FilePath:", FilePath)
 
@@ -127,28 +140,29 @@ module.exports = (function() {
 				DBG("Saved Info")
 
 				return FilePath
-				
+
 			}
 
 			return class InfoBackup extends Plugin {
+				constructor() { super() }
 				getDescription() { return PluginConfig.PluginInfo.Description; }
 				getVersion() { return PluginConfig.PluginInfo.Version; }
 				getAuthor() { return PluginConfig.PluginInfo.Author; }
 				getName() { return PluginConfig.PluginInfo.Name }
 
-				
+
 
 				start() {
-					var Config = BdApi.Data.load("InfoBackup", "__CONFIG")
+					var Config = BdApi.Data.load(PluginConfig.PluginInfo.Name, "__CONFIG")
 					if (Config) {
 						PluginConfig.PluginConfig = Config
 					}
 					G_Running = true;
 
-					
+
 
 					(async function () {
-						while (!BDFDB || !BDFDB.LibraryStores || !BDFDB.LibraryStores.RelationshipStore) {
+						while (!global.ZeresPluginLibrary || !ZeresPluginLibrary.DiscordModules || !ZeresPluginLibrary.DiscordModules.UserStore) {
 							await Sleep(5000);
 						}
 						while (G_Running) {
@@ -163,7 +177,7 @@ module.exports = (function() {
 								console.error(Error)
 								BdApi.UI.showToast(`Failed To Save Backup File, Please Wait For An Update`, { type: "error", timeout: 5000 })
 							}
-							finally {}
+							finally { }
 							await Sleep(PluginConfig.PluginConfig.FileSavingDelay)
 						}
 					})()
@@ -183,7 +197,7 @@ module.exports = (function() {
 
 						const TimePrompt = document.createElement("input");
 						TimePrompt.type = "number";
-						TimePrompt.value = "1"
+						TimePrompt.value = String(PluginConfig.PluginConfig.FileSavingDelay / (60 * (60 * 1000)))
 						TimePrompt.min = "0.5"
 						TimePrompt.max = "8"
 
@@ -200,7 +214,7 @@ module.exports = (function() {
 								return
 							}
 							PluginConfig.PluginConfig.FileSavingDelay = (60 * (60 * 1000)) * Number;
-							DBG(Number, PluginConfig.PluginConfig.FileSavingDelay)
+							DBG("New Saving Delay Info ", Number, PluginConfig.PluginConfig.FileSavingDelay)
 						}
 						TimePrompt.addEventListener("change", Function)
 
@@ -214,9 +228,13 @@ module.exports = (function() {
 
 				stop() {
 					G_Running = false
-					BdApi.Data.save("InfoBackup", "__CONFIG", PluginConfig.PluginConfig)
+					BdApi.Data.save(PluginConfig.PluginInfo.Name, "__CONFIG", PluginConfig.PluginConfig)
 				}
 			}
-		})(window.BDFDB_Global.PluginUtils.buildPlugin(ChangeLog))
+		})(ZeresPluginLibrary.buildPlugin({
+			name: PluginConfig.PluginInfo.Name,
+			version: PluginConfig.PluginInfo.Version,
+			github_raw: PluginConfig.PluginInfo.GitHubRaw
+		}))
 	}
 })()
